@@ -1,0 +1,18 @@
+{
+  "id": "notes",
+  "name": "Notes",
+  "tagline": "Workspace-aware Prompt Stash, colored #tags, and Markdown Scratchpad sidecar for Google Antigravity.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Arthur Cavallari",
+    "github": "arthurcavallari"
+  },
+  "funding": "https://github.com/sponsors/arthurcavallari",
+  "license": "MIT",
+  "pricing": "free",
+  "categories": [
+    "productivity"
+  ],
+  "capabilityTier": "TIER_3_AGENT_CONTROL",
+  "minAntigravityVersion": "2.0.0"
+}

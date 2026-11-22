@@ -1,0 +1,15 @@
+node_modules/
+*.tgz
+*.log
+npm-debug.log*
+.env
+.env.*
+coverage/
+tmp/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+.superpowers/
+.worktrees/
+docs/superpowers/

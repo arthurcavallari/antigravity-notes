@@ -1,0 +1,72 @@
+{
+  "name": "antigravity-notes",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Workspace-aware Prompt Stash, colored #tags, and Markdown Scratchpad sidecar for Google Antigravity.",
+  "license": "MIT",
+  "author": {
+    "name": "Arthur Cavallari",
+    "url": "https://github.com/arthurcavallari"
+  },
+  "homepage": "https://github.com/arthurcavallari/antigravity-notes#readme",
+  "bugs": {
+    "url": "https://github.com/arthurcavallari/antigravity-notes/issues"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/arthurcavallari"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arthurcavallari/antigravity-notes.git"
+  },
+  "engines": {
+    "node": ">=20.13.0"
+  },
+  "bin": {
+    "antigravity-notes": "./setup.mjs",
+    "agy-notes": "./setup.mjs"
+  },
+  "files": [
+    "sidecar.json",
+    "hub-manifest.json",
+    "launch.mjs",
+    "server.mjs",
+    "mcp.mjs",
+    "setup.mjs",
+    "lib",
+    "ui"
+  ],
+  "keywords": [
+    "antigravity",
+    "google-antigravity",
+    "agy",
+    "agy-plugin",
+    "antigravity-sidecar",
+    "antigravity-plugin",
+    "antigravity-extension",
+    "antigravity-ide",
+    "sidecar",
+    "notes",
+    "scratchpad",
+    "prompt-stash",
+    "mcp",
+    "gemini",
+    "hangar"
+  ],
+  "dependencies": {
+    "antigravity-sidecar-kit": "^1.9.0"
+  },
+  "devDependencies": {
+    "linkedom": "^0.18.15"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "setup": "node setup.mjs",
+    "uninstall": "node setup.mjs --uninstall",
+    "test": "node --test test/*.test.mjs",
+    "test:pack": "node scripts/pack-smoke.mjs",
+    "prepublishOnly": "npm test && npm run test:pack",
+    "validate:manifest": "node scripts/validate-manifest.mjs"
+  }
+}

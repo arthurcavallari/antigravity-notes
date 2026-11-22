@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" data-follow-host data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Antigravity Notes</title>
+  <script>
+    (function () {
+      const root = document.documentElement;
+      let theme = '';
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const hint = params.get('hostTheme') || '';
+        if (hint === 'light' || hint === 'dark') {
+          theme = hint;
+        }
+      } catch {}
+      if (!theme) {
+        try {
+          const cached = JSON.parse(window.sessionStorage.getItem('agy.theme.v1') || 'null');
+          if (cached && cached.themeType === 'light') {
+            theme = 'light';
+          } else if (cached && cached.isDark === false) {
+            theme = 'light';
+          } else if (cached) {
+            theme = 'dark';
+          }
+        } catch {}
+      }
+      if (!theme) {
+        const prefersLight = Boolean(window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+        theme = prefersLight ? 'light' : 'dark';
+      }
+      root.setAttribute('data-theme', theme);
+      root.style.colorScheme = theme;
+    })();
+  </script>
+  <script src="/preload.js"></script>
+  <link rel="stylesheet" href="/compiled_tailwind.css" />
+  <link rel="stylesheet" href="/shell.css" />
+  <link rel="stylesheet" href="/ui.css" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/components.css" />
+  <script type="module" src="/markdown.js"></script>
+  <script defer src="/shell.js"></script>
+  <script defer src="/ui.js"></script>
+  <script defer src="/core.js"></script>
+  <script defer src="/components/swatch-picker.js"></script>
+  <script defer src="/components/stash-tab.js"></script>
+  <script defer src="/components/combine-modal.js"></script>
+  <script defer src="/components/scratchpad-tab.js"></script>
+  <script defer src="/app.js"></script>
+</head>
+<body data-newux-theme="onyx">
+  <main id="notes-app" class="notes-shell" data-color-style="wash" data-workbench="split">
+    <header class="agy-chrome-bar notes-chrome-bar">
+      <agy-tab-strip id="main-tabs" class="agy-tab-strip notes-main-tabs" role="tablist" aria-label="Notes surfaces">
+        <button type="button" role="tab" id="tab-stash" class="agy-tab active" data-surface="stash" aria-selected="true">
+          <span class="agy-tab-icon" id="icon-stash"></span>
+          <span class="agy-tab-label">Stash</span>
+          <span id="stash-tab-count" class="agy-count-pill">0</span>
+        </button>
+        <button type="button" role="tab" id="tab-scratchpad" class="agy-tab" data-surface="scratchpad" aria-selected="false">
+          <span class="agy-tab-icon" id="icon-pad"></span>
+          <span class="agy-tab-label"><span class="notes-pad-full-label">Scratchpad</span><span class="notes-pad-short-label">Pad</span></span>
+        </button>
+      </agy-tab-strip>
+      <agy-toggle-group id="workbench-toggle" class="agy-toggle-group notes-workbench-switch" aria-label="Maximized layout mode"></agy-toggle-group>
+      <div class="agy-chrome-actions">
+        <button type="button" id="settings-btn" class="agy-icon-btn" popovertarget="settings-popover" title="Notes &amp; MCP Settings" aria-label="Notes and MCP Settings"></button>
+      </div>
+    </header>
+
+    <div id="notes-body" class="notes-body">
+      <section id="surface-stash" class="notes-panel" data-stash-layout="grid" aria-label="Prompt Stash"></section>
+      <agy-split-sash id="workbench-sash" direction="horizontal" min-ratio="0.26" max-ratio="0.72" aria-label="Resize Stash and Scratchpad split"></agy-split-sash>
+      <section id="surface-scratchpad" class="notes-panel hidden" data-pad-mode="edit" aria-label="Scratchpad"></section>
+    </div>
+
+    <div id="settings-popover" popover="auto" class="notes-settings-popover" aria-label="Notes settings">
+      <div class="agy-card-section-bar">
+        <span>Appearance &amp; Capture</span>
+      </div>
+      <div class="notes-setting-row">
+        <div class="notes-setting-label">
+          <span class="notes-setting-title">Card colors</span>
+          <span class="notes-setting-sub">Visual tint style</span>
+        </div>
+        <agy-toggle-group id="color-style-toggle" class="agy-toggle-group" aria-label="Card color style"></agy-toggle-group>
+      </div>
+      <div class="notes-setting-row">
+        <div class="notes-setting-label">
+          <span class="notes-setting-title">Submit chord</span>
+          <span class="notes-setting-sub">Quick-stash composer key</span>
+        </div>
+        <agy-toggle-group id="enter-mode-toggle" class="agy-toggle-group" aria-label="Submit chord"></agy-toggle-group>
+      </div>
+      <div class="agy-card-section-bar">
+        <span>Opt-In Agent MCP</span>
+        <span id="mcp-token-badge" class="agy-badge off">0 tok</span>
+      </div>
+      <div class="notes-setting-row">
+        <div class="notes-setting-label">
+          <span class="notes-setting-title">Agent Read</span>
+          <span class="notes-setting-sub">list_stash, read_scratchpad</span>
+        </div>
+        <agy-switch id="mcp-read-switch" size="sm" title="Allow Agent to Read Notes"></agy-switch>
+      </div>
+      <div class="notes-setting-row">
+        <div class="notes-setting-label">
+          <span class="notes-setting-title">Agent Write</span>
+          <span class="notes-setting-sub">stash_prompt, append_scratchpad</span>
+        </div>
+        <agy-switch id="mcp-write-switch" size="sm" title="Allow Agent to Write Notes"></agy-switch>
+      </div>
+      <div class="notes-setting-row">
+        <button type="button" id="export-stash-btn" class="agy-btn agy-btn-xs agy-btn-outline has-icon notes-full-btn"></button>
+      </div>
+    </div>
+
+    <dialog id="combine-dialog" class="notes-dialog" closedby="any" aria-labelledby="combine-dialog-title">
+      <div class="agy-card-header notes-dialog-header">
+        <span id="combine-dialog-title" class="agy-card-title">Combine &amp; Preview</span>
+        <button type="button" id="combine-close-btn" class="agy-icon-btn" aria-label="Close dialog"></button>
+      </div>
+      <label for="combine-textarea" class="agy-field-help">Edit or add framing context before sending:</label>
+      <textarea id="combine-textarea" class="agy-input notes-dialog-textarea"></textarea>
+      <div class="agy-card-actions notes-dialog-actions">
+        <button type="button" id="combine-cancel-btn" class="agy-btn agy-btn-xs agy-btn-ghost">Cancel</button>
+        <button type="button" id="combine-copy-btn" class="agy-btn agy-btn-xs agy-btn-outline">Copy</button>
+        <button type="button" id="combine-new-btn" class="agy-btn agy-btn-xs agy-btn-secondary">New Chat</button>
+        <button type="button" id="combine-send-btn" class="agy-btn agy-btn-xs agy-btn-primary">Send to Chat ↵</button>
+      </div>
+    </dialog>
+  </main>
+</body>
+</html>

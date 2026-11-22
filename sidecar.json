@@ -1,0 +1,27 @@
+{
+  "command": "node",
+  "args": [
+    "launch.mjs"
+  ],
+  "display_name": "Notes",
+  "description": "Workspace-aware Prompt Stash and Markdown Scratchpad sidecar for Google Antigravity.",
+  "has_web_ui": true,
+  "restart_policy": "always",
+  "ui_config": {
+    "display_name": "Notes",
+    "views": [
+      {
+        "entrypoint": "SIDECAR_UI_ENTRYPOINT_AUX_PANE",
+        "path": "/",
+        "title": "Notes"
+      }
+    ]
+  },
+  "agent_permissions": {
+    "workspace_uris": [],
+    "allows_user_interactions": true
+  },
+  "sandbox": {
+    "disable_sandbox": true
+  }
+}
