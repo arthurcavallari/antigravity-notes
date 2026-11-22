@@ -116,14 +116,23 @@
     const busy = Boolean(pendingSave) || inFlightSaves.size > 0;
     if (busy) {
       els.status.textContent = 'Saving…';
+      els.status.removeAttribute('title');
+      els.status.classList.remove('is-error');
       return;
     }
     const target = getResolvedPadScope();
     const pads = Notes.listScopePads();
     const activePad = pads.find((p) => p.id === Notes.state.activePadId) || pads[0] || null;
     const activeId = activePad ? activePad.id : '';
-    const hasErr = Boolean((activeId && saveErrors.has(activeId)) || saveErrors.has(target.key));
+    const errMsg = (activeId && saveErrors.get(activeId)) || saveErrors.get(target.key) || '';
+    const hasErr = Boolean(errMsg);
     els.status.textContent = hasErr ? 'Save failed' : 'Saved';
+    els.status.classList.toggle('is-error', hasErr);
+    if (hasErr) {
+      els.status.setAttribute('title', errMsg);
+    } else {
+      els.status.removeAttribute('title');
+    }
   }
 
   function ensureDefaultPadIfNeeded() {
@@ -217,7 +226,8 @@
           saveErrors.set(resolvedId || scopeKey, err?.message || 'Save failed');
         }
         if (!unmounted) {
-          ui.showToast(err?.message || 'Failed to save scratchpad', { error: true });
+          const detail = err?.message ? `Save failed: ${err.message}` : 'Failed to save scratchpad.';
+          ui.showToast(detail, { error: true });
         }
       })
       .finally(() => {

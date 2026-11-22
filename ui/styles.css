@@ -309,6 +309,10 @@ body.resizing-split .agy-split-sash-v .sash-line {
   white-space: nowrap;
 }
 
+.notes-pad-status.is-error {
+  color: var(--destructive, var(--chart-5));
+}
+
 #pad-mode-toggle [data-toggle-id="split"] {
   display: none;
 }

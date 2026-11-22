@@ -1200,4 +1200,53 @@ describe('Task 7 — Fix Round 1 Regressions (Pre-Ensure Flush, Save Failure Rec
       await env.cleanup();
     }
   });
+
+  it('translates cryptic HTTP status codes (405, 401, 502) and network failures into actionable user-facing error messages', async () => {
+    const env = await createScratchpadTestEnv();
+    try {
+      const { win, doc } = env;
+      doc.getElementById('tab-scratchpad').click();
+      await flushAsync();
+
+      const editor = doc.getElementById('pad-editor');
+      const statusEl = doc.getElementById('pad-status');
+      const origFetch = win.fetch.bind(win);
+
+      // 1. Simulate launcher diagnostic fallback returning plain-text 405 Method Not Allowed
+      win.fetch = async () =>
+        new Response('Method Not Allowed', {
+          status: 405,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        });
+
+      editor.value = 'Draft while launcher fallback active';
+      editor.dispatchEvent(new win.Event('input', { bubbles: true }));
+      await assert.rejects(win.Notes.flushPendingScratchpadSave(), /Notes server is paused or stopped/i);
+      await flushAsync();
+
+      const toast405 = doc.querySelector('.agy-toast')?.textContent || '';
+      assert.doesNotMatch(toast405, /\bHTTP 405\b/i, 'Must not expose raw HTTP 405 status');
+      assert.match(toast405, /Save failed: Notes server is paused or stopped/i);
+      assert.equal(statusEl.textContent, 'Save failed');
+      assert.equal(statusEl.classList.contains('is-error'), true);
+      assert.match(statusEl.getAttribute('title') || '', /Notes server is paused or stopped/i);
+
+      // 2. Simulate 401 expired session & network TypeError('Failed to fetch') via Notes.apiCall
+      win.fetch = async () =>
+        new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      await assert.rejects(win.Notes.apiCall('/api/mutate', {}), /Notes session expired/i);
+
+      win.fetch = async () => {
+        throw new TypeError('Failed to fetch');
+      };
+      await assert.rejects(win.Notes.apiCall('/api/mutate', {}), /Could not reach Notes server/i);
+
+      win.fetch = origFetch;
+    } finally {
+      await env.cleanup();
+    }
+  });
 });

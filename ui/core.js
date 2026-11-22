@@ -344,8 +344,44 @@
     Notes.renderAll?.();
   }
 
+  function formatApiError(err) {
+    const raw = String(err?.message || err || '').trim();
+    if (!raw) {
+      return '';
+    }
+    if (/^(?:failed to fetch|networkerror\b|load failed\b|fetch failed\b)/i.test(raw)) {
+      return 'Could not reach Notes server — check that the Notes sidecar is running.';
+    }
+    if (/^HTTP 405\b|^method not allowed$/i.test(raw)) {
+      return 'Notes server is paused or stopped — reload the Notes pane to reconnect.';
+    }
+    if (/^HTTP (?:401|403)\b|^unauthorized$|^forbidden(?::|\s|$)/i.test(raw)) {
+      return 'Notes session expired — reload the Notes pane to reconnect.';
+    }
+    if (/^HTTP 404\b|^not found$/i.test(raw)) {
+      return 'Notes endpoint not found — restart the Notes sidecar.';
+    }
+    if (/^HTTP 413\b|^payload too large$/i.test(raw)) {
+      return 'Content exceeds maximum size limit.';
+    }
+    if (/^HTTP (?:502|503|504)\b/i.test(raw)) {
+      return 'Antigravity host service is unavailable — try again in a moment.';
+    }
+    if (/^HTTP 5\d\d\b|^internal server error$/i.test(raw)) {
+      return 'Notes server encountered an internal error — try again.';
+    }
+    if (/^HTTP \d{3}\b/i.test(raw)) {
+      return 'Request to Notes server failed — reload the Notes pane and try again.';
+    }
+    return raw;
+  }
+
   async function apiCall(path, body = {}, init = {}) {
-    return ui.apiCall(path, body, init);
+    try {
+      return await ui.apiCall(path, body, init);
+    } catch (err) {
+      throw new Error(formatApiError(err) || 'Request to Notes server failed.');
+    }
   }
 
   async function mutate(action, payload = {}) {
@@ -633,6 +669,7 @@
   Notes.exportStashMarkdown = exportStashMarkdown;
   Notes.formatRelativeAge = formatRelativeAge;
   Notes.applyServerState = applyServerState;
+  Notes.formatApiError = formatApiError;
   Notes.apiCall = apiCall;
   Notes.mutate = mutate;
   Notes.dispatchPrompt = dispatchPrompt;
