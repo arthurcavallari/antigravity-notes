@@ -672,4 +672,36 @@ describe('launch.mjs & setup.mjs — self-healing launcher config & MCP CLI setu
       rmSync(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it('isolates rpcOptions.sidecarDataRoot when a custom dataDir is provided so test/smoke runs never kill a live host sidecar', async () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'notes-setup-isolation-'));
+    const dataDir = join(tmpDir, 'data');
+    let capturedRpcOptions = null;
+
+    try {
+      await runNotesSetup(['--skip-tests'], {
+        repoRoot: REPO_ROOT,
+        dataDir,
+        mcpConfigPath: join(tmpDir, 'mcp_config.json'),
+        globalSidecarsDir: join(tmpDir, 'sidecars'),
+        configJsonPath: join(tmpDir, 'config.json'),
+        packagesDir: join(tmpDir, 'packages'),
+        rpcOptions: { lsAddress: '', csrfToken: '' },
+        callLsRpcFn: async () => ({ ok: true }),
+        runSidecarSetupFn: async (cfg) => {
+          capturedRpcOptions = cfg.rpcOptions;
+          return { uninstalled: false, sidecarId: cfg.sidecarId, linkedTo: cfg.repoRoot };
+        },
+      });
+
+      assert.ok(capturedRpcOptions?.sidecarDataRoot, 'Expected sidecarDataRoot to be isolated when dataDir is set');
+      assert.equal(
+        capturedRpcOptions.sidecarDataRoot.startsWith(dataDir),
+        true,
+        `Expected isolated sidecarDataRoot inside ${dataDir}, got ${capturedRpcOptions.sidecarDataRoot}`
+      );
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
 });

@@ -89,8 +89,12 @@ export async function runNotesSetup(rawArgs = process.argv.slice(2), rawOptions 
   const options = isPlainObject(rawOptions) ? rawOptions : {};
   const env = isPlainObject(options.env) ? options.env : process.env;
   const repoRoot = options.repoRoot ? resolve(String(options.repoRoot)) : REPO_ROOT;
-  const dataDir = options.dataDir ? resolve(String(options.dataDir)) : resolveNotesDataDir(env);
+  const hasCustomDataDir = Boolean(options.dataDir);
+  const dataDir = hasCustomDataDir ? resolve(String(options.dataDir)) : resolveNotesDataDir(env);
   const statePath = join(dataDir, 'state.json');
+  const effectiveRpcOptions = hasCustomDataDir && !options.rpcOptions?.sidecarDataRoot
+    ? { ...(isPlainObject(options.rpcOptions) ? options.rpcOptions : {}), sidecarDataRoot: join(dataDir, '_rpc_sandbox') }
+    : options.rpcOptions;
   const flags = parseSetupFlags(args);
   const runSidecarSetupFn = typeof options.runSidecarSetupFn === 'function' ? options.runSidecarSetupFn : runSidecarSetup;
   let finalSettings = null;
@@ -127,7 +131,7 @@ export async function runNotesSetup(rawArgs = process.argv.slice(2), rawOptions 
     ...(options.globalSidecarsDir ? { globalSidecarsDir: options.globalSidecarsDir } : {}),
     ...(options.configJsonPath ? { configJsonPath: options.configJsonPath } : {}),
     ...(options.packagesDir ? { packagesDir: options.packagesDir } : {}),
-    ...(options.rpcOptions ? { rpcOptions: options.rpcOptions } : {}),
+    ...(effectiveRpcOptions ? { rpcOptions: effectiveRpcOptions } : {}),
     ...(options.execFn ? { execFn: options.execFn } : {}),
     ...(options.restartDelayMs !== undefined ? { restartDelayMs: options.restartDelayMs } : {}),
     onBeforeSetup: async (ctx) => {

@@ -70,7 +70,7 @@ try {
     configJsonPath: join(sandboxDir, 'config.json'),
     packagesDir: join(sandboxDir, 'packages'),
     restartDelayMs: 0,
-    rpcOptions: { lsAddress: '', csrfToken: '' },
+    rpcOptions: { lsAddress: '', csrfToken: '', sidecarDataRoot: join(sandboxDir, 'sidecar_data') },
     callLsRpcFn: async () => ({ ok: true }),
   };
 
