@@ -1052,8 +1052,8 @@ function applyEditorTabIndent(value, selectionStart, selectionEnd, outdent = fal
   const insideFence = blockStart > 0 && isInsideOpenFence(str.slice(0, blockStart - 1));
 
   let nextVal = '';
-  let newStart = selStart;
-  let newEnd = selEnd;
+  let newStart;
+  let newEnd;
 
   if (!outdent) {
     const addedCounts = [];

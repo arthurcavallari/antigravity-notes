@@ -38,10 +38,10 @@ function createTempUiFixture(rootDir) {
     'utf8'
   );
   for (const [, relFile] of UI_ROUTE_FILES) {
-    const full = join(uiDir, relFile);
-    if (!existsSync(full)) {
-      writeFileSync(full, `/* fixture ${relFile} */\n`, 'utf8');
+    if (relFile === 'index.html') {
+      continue;
     }
+    writeFileSync(join(uiDir, relFile), `/* fixture ${relFile} */\n`, 'utf8');
   }
   return uiDir;
 }

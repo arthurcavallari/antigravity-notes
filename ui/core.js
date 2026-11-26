@@ -201,7 +201,10 @@
       }
     }
     val = val.replace(/%3a/gi, ':').replace(/\\/g, '/').replace(/^\/([a-zA-Z]:)/, '$1');
-    val = val.replace(/\/{2,}/g, '/').replace(/\/+$/, '');
+    val = val.replace(/\/{2,}/g, '/');
+    let valEnd = val.length;
+    while (valEnd > 0 && val.charCodeAt(valEnd - 1) === 47) valEnd -= 1;
+    val = val.slice(0, valEnd);
     return val.toLowerCase();
   }
 

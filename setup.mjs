@@ -6,7 +6,7 @@
 import { cpSync, existsSync, realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readJsonSafe } from 'antigravity-sidecar-kit/config';
+import { GLOBAL_SIDECARS_DIR, readJsonSafe } from 'antigravity-sidecar-kit/config';
 import { runSidecarSetup } from 'antigravity-sidecar-kit/setup';
 import { writeJsonAtomic } from 'antigravity-sidecar-kit/state-sync';
 import {
@@ -159,10 +159,15 @@ export async function runNotesSetup(rawArgs = process.argv.slice(2), rawOptions 
   }
 
   const linkedRoot = setupRes.linkedTo || repoRoot;
+  const effectiveSidecarsDir = resolve(String(options.globalSidecarsDir || GLOBAL_SIDECARS_DIR));
+  const stableLinkEntry = join(effectiveSidecarsDir, SIDECAR_ID, 'mcp.mjs');
+  const resolvedMcpEntry = options.mcpEntryPath
+    || (existsSync(stableLinkEntry) ? stableLinkEntry : join(linkedRoot, 'mcp.mjs'));
   const mcpRes = await syncMcpRegistration({
     mcpRead: finalSettings.mcpRead,
     mcpWrite: finalSettings.mcpWrite,
-    mcpEntryPath: options.mcpEntryPath || join(linkedRoot, 'mcp.mjs'),
+    mcpEntryPath: resolvedMcpEntry,
+    globalSidecarsDir: effectiveSidecarsDir,
     mcpConfigPath: options.mcpConfigPath,
     callLsRpcFn: options.callLsRpcFn,
   });

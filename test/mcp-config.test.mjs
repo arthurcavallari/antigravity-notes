@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
@@ -9,6 +9,7 @@ import {
   MCP_SERVER_NAME,
   syncMcpRegistration,
 } from '../lib/mcp-config.mjs';
+import { runNotesSetup } from '../setup.mjs';
 
 describe('lib/mcp-config.mjs — syncMcpRegistration lifecycle', () => {
   it('registers disabled by default (0 context tokens), enables on read/write opt-in, preserves unrelated servers, strips BOM, and removes entry on uninstall', async () => {
@@ -148,7 +149,7 @@ describe('lib/mcp-config.mjs — syncMcpRegistration lifecycle', () => {
         callLsRpcFn: offlineRpc,
       });
       assert.deepEqual(uninstMissing, { registered: false, enabled: false });
-      assert.equal(existsSync(missingPath), false);
+      assert.equal(existsSync(join(tmpDir, 'nested')), false);
 
       // Register when file does not exist yet + offline LS RPC
       const created = await syncMcpRegistration({
@@ -158,7 +159,6 @@ describe('lib/mcp-config.mjs — syncMcpRegistration lifecycle', () => {
         callLsRpcFn: offlineRpc,
       });
       assert.deepEqual(created, { registered: true, enabled: true });
-      assert.equal(existsSync(missingPath), true);
       const parsed = JSON.parse(readFileSync(missingPath, 'utf8'));
       assert.equal(parsed.mcpServers['antigravity-notes'].command, process.execPath);
       assert.equal(parsed.mcpServers['antigravity-notes'].args[0], join(REPO_ROOT, 'mcp.mjs'));
@@ -176,6 +176,59 @@ describe('lib/mcp-config.mjs — syncMcpRegistration lifecycle', () => {
         /SyntaxError|JSON/i
       );
       assert.equal(readFileSync(missingPath, 'utf8'), '{ broken json');
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('registers stable sidecars/notes/mcp.mjs link path instead of versioned packages/notes@x.y.z path so upgrades do not break MCP', async () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), 'notes-mcp-stable-link-'));
+    try {
+      const sidecarsDir = join(tmpDir, 'sidecars');
+      const packagesDir = join(tmpDir, 'packages');
+      const npxSimDir = join(tmpDir, '_npx', 'hash1', 'node_modules', 'antigravity-notes');
+      mkdirSync(join(npxSimDir, 'ui'), { recursive: true });
+      for (const rel of ['sidecar.json', 'hub-manifest.json', 'launch.mjs', 'server.mjs', 'mcp.mjs', 'ui/markdown.js']) {
+        writeFileSync(join(npxSimDir, rel), rel.endsWith('.json') ? '{"version":"1.0.0"}\n' : '// stub\n', 'utf8');
+      }
+      writeFileSync(
+        join(npxSimDir, 'package.json'),
+        JSON.stringify({ name: 'antigravity-notes', version: '1.0.0', dependencies: { 'antigravity-sidecar-kit': '^1.9.0' } }),
+        'utf8'
+      );
+
+      const mcpConfigPath = join(tmpDir, 'mcp_config.json');
+      await runNotesSetup(['--skip-tests', '--with-mcp'], {
+        repoRoot: npxSimDir,
+        dataDir: join(tmpDir, 'data'),
+        globalSidecarsDir: sidecarsDir,
+        configJsonPath: join(tmpDir, 'config.json'),
+        packagesDir,
+        mcpConfigPath,
+        restartDelayMs: 0,
+        rpcOptions: { lsAddress: '', csrfToken: '', sidecarDataRoot: join(tmpDir, 'sidecar_data') },
+        callLsRpcFn: async () => ({ ok: true }),
+      });
+
+      const stableEntry = join(sidecarsDir, SIDECAR_ID, 'mcp.mjs');
+      const mcpCfg = JSON.parse(readFileSync(mcpConfigPath, 'utf8'));
+      assert.equal(
+        mcpCfg.mcpServers['antigravity-notes'].args[0],
+        stableEntry,
+        'mcp_config.json must point to stable sidecars/notes/mcp.mjs link rather than versioned packages/notes@1.0.0'
+      );
+
+      // syncMcpRegistration with globalSidecarsDir also resolves stable sidecars/notes/mcp.mjs
+      const mcpConfigPath2 = join(tmpDir, 'mcp_config_2.json');
+      await syncMcpRegistration({
+        mcpRead: true,
+        mcpWrite: false,
+        globalSidecarsDir: sidecarsDir,
+        mcpConfigPath: mcpConfigPath2,
+        callLsRpcFn: null,
+      });
+      const mcpCfg2 = JSON.parse(readFileSync(mcpConfigPath2, 'utf8'));
+      assert.equal(mcpCfg2.mcpServers['antigravity-notes'].args[0], stableEntry);
     } finally {
       rmSync(tmpDir, { recursive: true, force: true });
     }

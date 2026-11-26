@@ -652,10 +652,12 @@
     const pads = Notes.listScopePads();
     const activePad = pads.find((p) => p.id === Notes.state.activePadId) || pads[0] || null;
     const rawTitle = activePad?.title || 'scratchpad';
-    const slug = rawTitle
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'scratchpad';
+    const rawSlug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    let slugStart = 0;
+    let slugEnd = rawSlug.length;
+    while (slugStart < slugEnd && rawSlug.charCodeAt(slugStart) === 45) slugStart += 1;
+    while (slugEnd > slugStart && rawSlug.charCodeAt(slugEnd - 1) === 45) slugEnd -= 1;
+    const slug = rawSlug.slice(slugStart, slugEnd) || 'scratchpad';
     const filename = `${slug}.md`;
     const content = activePad ? activePad.content : els?.editor?.value || '';
     return { filename, content };

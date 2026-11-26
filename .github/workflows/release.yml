@@ -156,7 +156,13 @@ jobs:
           echo "Pushed v${version} to main. The tag starts the run that publishes it."
       - name: Publish to npm (tag push)
         if: env.IS_DISPATCH != 'true'
-        run: npm publish --provenance --access public
+        run: |
+          pkg="$(node -p "const p = require('./package.json'); `${p.name}@${p.version}`")"
+          if npm view "${pkg}" version >/dev/null 2>&1; then
+            echo "${pkg} is already published on npm; skipping publish."
+          else
+            npm publish --provenance --access public
+          fi
       - name: Create GitHub Release (tag push)
         if: env.IS_DISPATCH != 'true'
         run: |

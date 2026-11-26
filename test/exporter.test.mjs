@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
+import { pathToFileURL } from 'node:url';
 import { createExporter, sanitizeExportFilename } from '../lib/exporter.mjs';
 
 describe('sanitizeExportFilename', () => {
@@ -140,5 +141,38 @@ describe('createExporter — Downloads & cross-platform native Save As', () => {
     const exporter = createExporter();
     await assert.rejects(exporter.exportMarkdown({ filename: 'a.md', content: 123 }), (e) => e.statusCode === 400);
     await assert.rejects(exporter.exportMarkdown({ filename: 'a.md', content: 'ok', mode: 'ftp' }), (e) => e.statusCode === 400);
+  });
+
+  it('decodes percent-encoded and POSIX file:/// workspacePath URIs into NOTES_SAVE_DIR', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'notes-export-uri-'));
+    try {
+      const spacedWorkspace = join(root, 'My Spaced Project');
+      const downloadsDir = join(root, 'Downloads');
+      mkdirSync(spacedWorkspace, { recursive: true });
+      mkdirSync(downloadsDir, { recursive: true });
+
+      const encodedUri = pathToFileURL(spacedWorkspace).href.replace(/^file:\/\/\/([A-Za-z]):/, 'file:///$1%3A');
+      let seenSaveDir = '';
+      const exporter = createExporter({
+        platform: 'darwin',
+        homeDir: root,
+        downloadsDir,
+        execFileFn: async (_cmd, _args, opts) => {
+          seenSaveDir = opts.env.NOTES_SAVE_DIR;
+          return { stdout: '', stderr: '' };
+        },
+      });
+
+      const res = await exporter.exportMarkdown({
+        filename: 'draft.md',
+        content: '# Draft\n',
+        mode: 'save-as',
+        workspacePath: encodedUri,
+      });
+      assert.equal(res.cancelled, true);
+      assert.equal(seenSaveDir.toLowerCase(), spacedWorkspace.toLowerCase());
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
