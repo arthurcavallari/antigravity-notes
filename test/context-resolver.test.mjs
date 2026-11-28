@@ -354,6 +354,59 @@ describe('lookupConversationTitle, 3_000ms cache TTL, invalidation & graceful RP
     assert.ok(calls >= 5);
   });
 
+  it('uses getSummariesFn (JetboxSubscribeToSummaries) with 3s TTL caching + in-flight coalescing + invalidate() to resolve unloaded post-restart conversations, falling back to GetAllCascadeTrajectories on stream error', async () => {
+    let streamCalls = 0;
+    let unaryCalls = 0;
+    let clock = 1_000;
+    let failStream = false;
+
+    const resolver = createContextResolver({
+      now: () => clock,
+      getSummariesFn: async () => {
+        streamCalls += 1;
+        await new Promise((r) => setTimeout(r, 10));
+        if (failStream) {
+          throw new Error('stream unavailable in run_command');
+        }
+        return {
+          trajectorySummaries: {
+            'conv-unloaded-historical': {
+              summary: 'Historical Unloaded Thread',
+              workspaces: [
+                { workspaceFolderAbsoluteUri: 'file:///c%3A/Users/dev/IdeaProjects/antigravity-notes/' },
+              ],
+            },
+          },
+          deletes: [],
+        };
+      },
+      callLsRpcFn: async () => {
+        unaryCalls += 1;
+        return {
+          trajectorySummaries: {
+            'conv-resident-only': { summary: 'Resident Fallback Thread' },
+          },
+        };
+      },
+    });
+
+    const [t1, t2] = await Promise.all([
+      resolver.lookupConversationTitle('conv-unloaded-historical'),
+      resolver.lookupConversationTitle('conv-unloaded-historical'),
+    ]);
+    assert.equal(t1, 'Historical Unloaded Thread');
+    assert.equal(t2, 'Historical Unloaded Thread');
+    assert.equal(await resolver.lookupConversationTitle('conv-unloaded-historical'), 'Historical Unloaded Thread');
+    assert.equal(streamCalls, 1, 'coalesced and cached within 3s TTL');
+    assert.equal(unaryCalls, 0);
+
+    resolver.invalidate();
+    failStream = true;
+    assert.equal(await resolver.lookupConversationTitle('conv-resident-only'), 'Resident Fallback Thread');
+    assert.equal(streamCalls, 2);
+    assert.equal(unaryCalls, 1, 'fell back to GetAllCascadeTrajectories on stream failure');
+  });
+
   it('resolves Antigravity Project name from projectsDir via trajectoryMetadata.projectId or multi-repo folder set match', async () => {
     const { mkdtempSync, rmSync, writeFileSync } = await import('node:fs');
     const { tmpdir } = await import('node:os');

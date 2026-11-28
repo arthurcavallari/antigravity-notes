@@ -66,21 +66,25 @@ describe('hub-manifest.json, sidecar.json & package-lock.json alignment', () => 
     );
   });
 
-  it('keeps package.json, hub-manifest.json, and package-lock.json aligned and sidecar-kit >=1.9.0 with zero file: paths', () => {
+  it('keeps package.json, hub-manifest.json, and package-lock.json aligned and sidecar-kit >=1.10.0 with zero file: or personal paths', () => {
     const pkgRaw = readFileSync(join(REPO_ROOT, 'package.json'), 'utf8');
     const lockRaw = readFileSync(join(REPO_ROOT, 'package-lock.json'), 'utf8');
+    const sidecarRaw = readFileSync(join(REPO_ROOT, 'sidecar.json'), 'utf8');
     assert.doesNotMatch(pkgRaw, /"file:/i);
     assert.doesNotMatch(lockRaw, /"file:/i);
+    assert.doesNotMatch(sidecarRaw, /Users|[A-Za-z]:\//);
 
     const pkg = JSON.parse(pkgRaw);
     const hub = readJson('hub-manifest.json');
+    const sidecar = JSON.parse(sidecarRaw);
     const lock = JSON.parse(lockRaw);
+    assert.deepEqual(sidecar.agent_permissions?.workspace_uris, []);
     assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
     assert.equal(hub.version, pkg.version);
     assert.equal(lock.version, pkg.version);
     assert.equal(lock.lockfileVersion, 3);
-    assert.equal(pkg.dependencies['antigravity-sidecar-kit'], '^1.9.0');
+    assert.equal(pkg.dependencies['antigravity-sidecar-kit'], '^1.10.0');
     assert.equal(lock.packages?.['']?.version, pkg.version);
-    assert.match(lock.packages?.['node_modules/antigravity-sidecar-kit']?.version || '', /^1\.9\./);
+    assert.match(lock.packages?.['node_modules/antigravity-sidecar-kit']?.version || '', /^1\.(?:10|[1-9]\d)\./);
   });
 });
